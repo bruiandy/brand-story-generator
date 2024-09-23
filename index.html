@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>品牌故事生成器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        p {
+            color: #666;
+        }
+        form {
+            margin-top: 20px;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9f7ef;
+            border-radius: 4px;
+            display: none;
+        }
+        #loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+            font-size: 18px;
+            color: #4CAF50;
+        }
+        #error {
+            color: red;
+            display: none;
+            margin-top: 20px;
+        }
+        #apiKeyContainer {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>品牌故事生成器</h1>
+        <p>输入您的品牌信息，我们将帮助您创作引人入胜的品牌故事。</p>
+        
+        <div id="apiKeyContainer">
+            <label for="apiKey">API Key:</label>
+            <input type="text" id="apiKey" placeholder="请输入您的DeepSeek API Key">
+            <button id="saveApiKey">保存 API Key</button>
+        </div>
+
+        <form id="brandForm">
+            <label for="brandName">品牌名称:</label>
+            <input type="text" id="brandName" required>
+            
+            <label for="industry">行业:</label>
+            <select id="industry" required>
+                <option value="">请选择行业</option>
+                <option value="科技">科技</option>
+                <option value="食品">食品</option>
+                <option value="时尚">时尚</option>
+                <option value="教育">教育</option>
+                <option value="健康">健康</option>
+            </select>
+            
+            <label for="targetAudience">目标受众:</label>
+            <input type="text" id="targetAudience" required>
+            
+            <label for="coreValues">核心价值观:</label>
+            <textarea id="coreValues" rows="3" required></textarea>
+            
+            <label for="brandVision">品牌愿景:</label>
+            <textarea id="brandVision" rows="3" required></textarea>
+            
+            <button type="submit">生成品牌故事</button>
+        </form>
+        
+        <div id="loading">正在生成品牌故事，请稍候...</div>
+        <div id="result"></div>
+        <div id="error">抱歉，生成品牌故事时出现了问题，请稍后再试。</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const apiKey = localStorage.getItem('apiKey');
+            const apiKeyContainer = document.getElementById('apiKeyContainer');
+            const saveApiKeyButton = document.getElementById('saveApiKey');
+
+            if (!apiKey) {
+                apiKeyContainer.style.display = 'block';
+            }
+
+            saveApiKeyButton.addEventListener('click', function() {
+                const apiKeyInput = document.getElementById('apiKey').value;
+                localStorage.setItem('apiKey', apiKeyInput);
+                apiKeyContainer.style.display = 'none';
+            });
+        });
+
+        document.getElementById('brandForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // 显示加载中状态，隐藏之前的结果和错误信息
+            const resultDiv = document.getElementById('result');
+            const errorDiv = document.getElementById('error');
+            const loadingDiv = document.getElementById('loading');
+            resultDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+            loadingDiv.style.display = 'block';
+
+            const apiKey = localStorage.getItem('apiKey');
+            const brandName = document.getElementById('brandName').value;
+            const industry = document.getElementById('industry').value;
+            const targetAudience = document.getElementById('targetAudience').value;
+            const coreValues = document.getElementById('coreValues').value;
+            const brandVision = document.getElementById('brandVision').value;
+            
+            const prompt = `请为以下品牌生成一个引人入胜的品牌故事：
+            品牌名称: ${brandName}
+            行业: ${industry}
+            目标受众: ${targetAudience}
+            核心价值观: ${coreValues}
+            品牌愿景: ${brandVision}`;
+            
+            const apiUrl = 'https://api.deepseek.com/chat/completions';  // 深度搜寻对话 API 的实际 URL
+            const requestBody = {
+                model: 'deepseek-chat',  // 使用 deepseek-chat 模型
+                messages: [
+                    { role: 'system', content: '你是一个品牌故事生成助手。' },  // 设置系统消息
+                    { role: 'user', content: prompt }  // 用户输入品牌相关信息
+                ],
+                stream: false  // 设置非流式输出
+            };
+            
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`  // 使用用户输入的 API 密钥
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                const data = await response.json();
+                const story = data.choices && data.choices.length > 0 ? data.choices[0].message.content.trim() : '未生成任何故事';
+                
+                resultDiv.innerHTML = `<h2>${brandName}的品牌故事</h2><p>${story}</p>`;
+                resultDiv.style.display = 'block';
+            } catch (error) {
+                console.error('生成品牌故事时遇到问题:', error);
+                errorDiv.textContent = '生成品牌故事时遇到问题：' + error.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
